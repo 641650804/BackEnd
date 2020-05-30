@@ -1,6 +1,6 @@
 # Maven项目相关处理
 
-==================== updated by Legion003 on 2020-05-29 ===================
+==================== updated by Legion on 2020-05-29 ===================
 
 #### 1. 报错：Failed to read artifact descriptor for org.apache.commons:commons-pool2 ####
 ##### 详细描述： #####
