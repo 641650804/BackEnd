@@ -44,3 +44,33 @@ resource中的文件最终会位于classpath根目录下，使用方式：
     pro.load(is);
 
 注意：由于需要项目打包，最好使用流的方式来读取配置文件，应避免使用File类、getResource()方法等，难以定位到配置文件；getResourceAsStream()方法中的路径以 / 开头的话是从classes文件夹根目录开始算的（通常编译后src和resource中的文件都会归并到target/classes之下，所以平时配置文件放resource底下就行）。
+
+## Maven依赖明明写对了就是会报错（依赖变红、刷新无法解决）
+
+@author:LiLi
+
+### 解决方法：使用镜像
+
++ 方式一：在这个Maven项目的pom.xml中，`<build></build>`对后面，`<project></project>`前面加上：
+  
+  ```xml
+  <!-- 使用aliyun镜像 -->
+  <repositories>
+      <repository>
+          <id>aliyun</id>
+          <name>aliyun</name>
+          <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+      </repository>
+  </repositories>
+  ```
+  
++ 方式二：做全局修改：在本地文件目录名为apache-maven-x.x.x文件夹下/conf/settings.xml中`<mirrors></mirrors>`里面加上：
+  
+  ```xml
+  <mirror>
+    <id>alimaven</id>
+    <name>aliyun maven</name>
+    <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+    <mirrorOf>central</mirrorOf>
+  </mirror>
+  ```
