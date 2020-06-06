@@ -113,7 +113,8 @@ java -jar xxx.jar
    fi
    ```
 
-   
+
+
 
 #### 3. springboot依赖冲突
 
@@ -122,3 +123,97 @@ java -jar xxx.jar
 > Failed to execute goal org.springframework.boot:spring-boot-maven-plugin
 
 猜测可能是与springboot中的相关依赖有冲突，改为Gson2.6版本后即可成功编译。
+
+
+
+##### ===================== updated on 2020-06-06 by Legion ======================
+
+#### 4. 国际化，将url中所带的语言换入Locale
+
+备注：springboot版本2.3.0可用
+
+在@Configuration中加入解析器和拦截器相关代码，并放入容器中（@Bean）
+
+```java
+//这里是放在启动类里的，主要是为了方便，@SpringBootApplication自带@Configuration
+@SpringBootApplication 
+public class Springboot02WebRestfulcrudApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Springboot02WebRestfulcrudApplication.class, args);
+    }
+
+    /**
+     * 默认解析器 其中locale表示默认语言
+     */
+    @Bean
+    public LocaleResolver localeResolver() {
+        SessionLocaleResolver localeResolver = new SessionLocaleResolver();
+        localeResolver.setDefaultLocale(Locale.CHINESE); //默认使用中文
+        return localeResolver;
+    }
+
+    /**
+     * 默认拦截器 其中l表示切换语言的参数名
+     */
+    @Bean
+    public WebMvcConfigurer localeInterceptor() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                LocaleChangeInterceptor localeInterceptor = new LocaleChangeInterceptor();
+                //参数名应该与url相应的参数名对应
+                localeInterceptor.setParamName("l");  
+                registry.addInterceptor(localeInterceptor);
+            }
+        };
+    }
+}
+```
+
+配合使用的还有thymeleaf引擎，语言配置文件。详情可见：[SpringBoot 快速支持国际化i18n](https://www.jianshu.com/p/e2eae08f3255)
+
+
+
+#### 5. 拦截与放行
+
+登录控制通常需要设置拦截器，但也要放行相对应的静态文件
+
+```java
+//使用WebMvcConfigurer可以扩展springmvc的功能
+@Configuration
+public class MyMVCConfig implements WebMvcConfigurer {
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        //处理登陆页面的映射
+        registry.addViewController("/").setViewName("login");
+        registry.addViewController("/index.html").setViewName("login");
+        registry.addViewController("/main.html").setViewName("dashboard");
+    }
+
+    /**
+     * 添加拦截器
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        //登录拦截器
+        registry.addInterceptor(new LoginHandlerInterceptor())
+                .addPathPatterns("/**")
+       			.excludePathPatterns("/index.html","/","/usr/login","/webjars/**","/static/**");
+    }
+    
+    /**
+     * 自定义静态资源对应，可有可无
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/webjars/");
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/");
+    }
+}
+```
+
+
+
