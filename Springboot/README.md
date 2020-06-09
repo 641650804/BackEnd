@@ -217,3 +217,64 @@ public class MyMVCConfig implements WebMvcConfigurer {
 
 
 
+##### ===================== updated on 2020-06-06 by Legion ======================
+
+#### 6. 在springboot中配置Druid监控
+
+有一种方式可以避免手动写Servlet和Filter，直接通过配置文件完成，非常方便。
+
+第一步：在pom中加入Druid的starter
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.1.10</version>
+</dependency>
+```
+
+第二步：在配置文件中写相应的配置，这里以yml为例
+
+```yaml
+spring:
+  datasource:
+    # 数据源基本配置
+    username: "root"
+    password: "password"
+    url: "jdbc:mysql://localhost:3306/mydb?serverTimezone=UTC"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+
+    # 指定Druid的配置
+
+    druid:
+      # 连接配置
+      initialSize: 5
+      minIdle: 5
+      maxActive: 20
+      maxWait: 60000
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 300000
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      poolPreparedStatements: true
+      # 监控配置
+      filters: stat,wall,log4j
+      maxPoolPreparedStatementPerConnectionSize: 20
+      useGlobalDataSourceStat: true
+      connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*" #不统计这些请求数据
+      stat-view-servlet: #访问监控网页的登录用户名和密码
+        url-pattern: /druid/*
+        reset-enable: false
+        #        allow: 127.0.0.1
+        login-username: admin
+        login-password: 12345
+
+```
+
