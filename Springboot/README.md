@@ -113,7 +113,8 @@ java -jar xxx.jar
    fi
    ```
 
-   
+
+
 
 #### 3. springboot依赖冲突
 
@@ -122,3 +123,158 @@ java -jar xxx.jar
 > Failed to execute goal org.springframework.boot:spring-boot-maven-plugin
 
 猜测可能是与springboot中的相关依赖有冲突，改为Gson2.6版本后即可成功编译。
+
+
+
+##### ===================== updated on 2020-06-06 by Legion ======================
+
+#### 4. 国际化，将url中所带的语言换入Locale
+
+备注：springboot版本2.3.0可用
+
+在@Configuration中加入解析器和拦截器相关代码，并放入容器中（@Bean）
+
+```java
+//这里是放在启动类里的，主要是为了方便，@SpringBootApplication自带@Configuration
+@SpringBootApplication 
+public class Springboot02WebRestfulcrudApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Springboot02WebRestfulcrudApplication.class, args);
+    }
+
+    /**
+     * 默认解析器 其中locale表示默认语言
+     */
+    @Bean
+    public LocaleResolver localeResolver() {
+        SessionLocaleResolver localeResolver = new SessionLocaleResolver();
+        localeResolver.setDefaultLocale(Locale.CHINESE); //默认使用中文
+        return localeResolver;
+    }
+
+    /**
+     * 默认拦截器 其中l表示切换语言的参数名
+     */
+    @Bean
+    public WebMvcConfigurer localeInterceptor() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                LocaleChangeInterceptor localeInterceptor = new LocaleChangeInterceptor();
+                //参数名应该与url相应的参数名对应
+                localeInterceptor.setParamName("l");  
+                registry.addInterceptor(localeInterceptor);
+            }
+        };
+    }
+}
+```
+
+配合使用的还有thymeleaf引擎，语言配置文件。详情可见：[SpringBoot 快速支持国际化i18n](https://www.jianshu.com/p/e2eae08f3255)
+
+
+
+#### 5. 拦截与放行
+
+登录控制通常需要设置拦截器，但也要放行相对应的静态文件
+
+```java
+//使用WebMvcConfigurer可以扩展springmvc的功能
+@Configuration
+public class MyMVCConfig implements WebMvcConfigurer {
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        //处理登陆页面的映射
+        registry.addViewController("/").setViewName("login");
+        registry.addViewController("/index.html").setViewName("login");
+        registry.addViewController("/main.html").setViewName("dashboard");
+    }
+
+    /**
+     * 添加拦截器
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        //登录拦截器
+        registry.addInterceptor(new LoginHandlerInterceptor())
+                .addPathPatterns("/**")
+       			.excludePathPatterns("/index.html","/","/usr/login","/webjars/**","/static/**");
+    }
+    
+    /**
+     * 自定义静态资源对应，可有可无
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/webjars/**")
+                .addResourceLocations("classpath:/webjars/");
+        registry.addResourceHandler("/static/**")
+                .addResourceLocations("classpath:/static/");
+    }
+}
+```
+
+
+
+##### ===================== updated on 2020-06-10 by Legion ======================
+
+#### 6. 在springboot中配置Druid监控
+
+有一种方式可以避免手动写Servlet和Filter，直接通过配置文件完成，非常方便。
+
+第一步：在pom中加入Druid的starter
+
+```xml
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.1.10</version>
+</dependency>
+```
+
+第二步：在配置文件中写相应的配置，这里以yml为例
+
+```yaml
+spring:
+  datasource:
+    # 数据源基本配置
+    username: "root"
+    password: "password"
+    url: "jdbc:mysql://localhost:3306/mydb?serverTimezone=UTC"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+
+    # 指定Druid的配置
+
+    druid:
+      # 连接配置
+      initialSize: 5
+      minIdle: 5
+      maxActive: 20
+      maxWait: 60000
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 300000
+      validationQuery: SELECT 1 FROM DUAL
+      testWhileIdle: true
+      testOnBorrow: false
+      testOnReturn: false
+      poolPreparedStatements: true
+      # 监控配置
+      filters: stat,wall,log4j
+      maxPoolPreparedStatementPerConnectionSize: 20
+      useGlobalDataSourceStat: true
+      connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*" #不统计这些请求数据
+      stat-view-servlet: #访问监控网页的登录用户名和密码
+        url-pattern: /druid/*
+        reset-enable: false
+        #        allow: 127.0.0.1
+        login-username: admin
+        login-password: 12345
+
+```
+
