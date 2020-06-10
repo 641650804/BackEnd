@@ -1,8 +1,14 @@
+---
+title:数据库表
+tags:数据库
+notebook:文
+---
+
 <!--
  * @Author: Lili
  * @Date: 2020-06-09 22:59:23
  * @Description:
- * @LastEditTime: 2020-06-10 03:04:00
+ * @LastEditTime: 2020-06-10 21:18:59
 -->
 
 # 数据库表
@@ -29,7 +35,7 @@ CREATE TABLE `hot` (
 ```
 
 ```sql
-load data infile 'C:/Users/lijy3/Desktop/hot_data3/hot_xinguan_2019-nCoV.csv'
+load data infile '/var/lib/mysql-files/hot_xinguan_新型冠状病毒.csv'
 ignore into table hot character set utf8mb4
 fields terminated by ',' optionally enclosed by '"' escaped by '"'
 lines terminated by '\r\n'
@@ -61,7 +67,7 @@ CREATE TABLE `relationship_` (
 ```
 
 ```sql
-load data infile 'C:/Users/lijy3/Desktop/hot_data2/relationship_#新冠肺炎病毒#.csv'
+load data infile '/var/lib/mysql-files/relationship_新型冠状病毒.csv'
 ignore into table relationship_ character set utf8mb4
 fields terminated by ',' optionally enclosed by '"' escaped by '"'
 lines terminated by '\r\n'
@@ -70,7 +76,8 @@ ignore 1 lines(user_id,user_name,bw_id,origin,reposts_count,fs_user_id,fs_screen
 
 ## 数据库表结构
 
-<!-- Version1 分表 -->
+<!-- Version1 分表 0 wd_bwid 检索词与bw_id对应 1 originAndRepo 所有微博的信息 2 relationship bw_id与fs_bw_id对应 -->
+<!-- Version2 在表1中增加一个字段prev_bw_id，以便查询 -->
 
 ### 表 0:检索词对应表 1bw_id 表
 
@@ -87,7 +94,7 @@ UNIQUE KEY `bw_id`(`bw_id`,`wd`)
 ```
 
 ```sql
-load data infile 'C:/Users/lijy3/Desktop/hot_data2/hot_xinguan_#新冠肺炎病毒#.csv'
+load data infile '/var/lib/mysql-files/hot_xinguan_#新冠肺炎病毒#.csv'
 ignore into table wd_bwid character set utf8mb4
 fields terminated by ',' optionally enclosed by '"' escaped by '"'
 lines terminated by '\r\n'
@@ -109,6 +116,7 @@ CREATE TABLE `originAndRepo` (
   `created_at` char(16) NOT NULL COMMENT '转发时间or创造时间',
   `reposts_count` char(10) NOT NULL COMMENT '转发次数',
   `origin` char(5) NOT NULL COMMENT '是否原创',
+  `prev_bw_id` char(16) NOT NULL COMMENT '其上一层微博or没有上一层微博',
   PRIMARY KEY (`id`),
   UNIQUE KEY `bw_id` (`bw_id`)
 ) CHARSET=utf8mb4;
@@ -124,8 +132,14 @@ select * from (
   from hot h inner join relationship_ r on r.bw_id=h.bw_id
   ) as a;
 
+  insert ignore into originAndRepo (bw_id,user_id,screen_name,tag,text,created_at)
+  select bw_id,user_id,user_name,tag,bw_text,created_at
+  from hot;
+
 --因为得到的原创微博的level并不是它自己的，而是转发它的那个人的
-update originAndRepo set level='0' where origin='TRUE';
+UPDATE originAndRepo SET `level`='0' WHERE origin='True';
+UPDATE originAndRepo SET prev_bw_id='Null' WHERE origin='True';
+
 ```
 
 范例：
@@ -138,8 +152,7 @@ update originAndRepo set level='0' where origin='TRUE';
         bw_id: 4464177198277616
    fans_count: Null
         level: 0
-         text: 我想问如果得了   #新冠肺炎病毒#  以后还会不会再次感染 得过的人是否会有抗体 有没有人知 
-道      #武汉加油#
+         text: 我想问如果得了   #新冠肺炎病毒#  以后还会不会再次感染 得过的人是否会有抗体 有没有人知道      #武汉加油#
           tag: #新冠肺炎病毒#  #武汉加油#
    created_at: 2020-01-24
 reposts_count: 0
@@ -149,9 +162,9 @@ reposts_count: 0
 ```sql
 --导入repo相关信息
 insert ignore into originAndRepo(
-  bw_id,user_id,screen_name,fans_count,text,created_at,reposts_count,origin,level
+  bw_id,user_id,screen_name,fans_count,text,created_at,reposts_count,origin,level,prev_bw_id
 )
-select fs_bw_id,fs_user_id,fs_screen_name,fs_fans_count,raw_text,created_at,(select distinct reposts_count from relationship_ b where b.bw_id=a.fs_bw_id),(select distinct origin from relationship_ b where b.bw_id=a.fs_bw_id),level
+select fs_bw_id,fs_user_id,fs_screen_name,fs_fans_count,raw_text,created_at,(select distinct reposts_count from relationship_ b where b.bw_id=a.fs_bw_id),(select distinct origin from relationship_ b where b.bw_id=a.fs_bw_id),level,bw_id
 from relationship_ a;
 ```
 
