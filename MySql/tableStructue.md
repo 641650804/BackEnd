@@ -8,7 +8,7 @@ notebook:文
  * @Author: Lili
  * @Date: 2020-06-09 22:59:23
  * @Description:
- * @LastEditTime: 2020-06-10 21:18:59
+ * @LastEditTime: 2020-06-12 00:07:37
 -->
 
 # 数据库表
@@ -35,10 +35,11 @@ CREATE TABLE `hot` (
 ```
 
 ```sql
-load data infile '/var/lib/mysql-files/hot_xinguan_新型冠状病毒.csv'
+-- 注意linux上导入的时候换行符是不一样的，windows用\r\n，linux用\n，否则会漏掉数据
+
+load data infile '/var/lib/mysql-files/hot_xinguan_2019-nCoV.csv'
 ignore into table hot character set utf8mb4
-fields terminated by ',' optionally enclosed by '"' escaped by '"'
-lines terminated by '\r\n'
+fields terminated by ',' optionally enclosed by '"' escaped by '"' lines terminated by '\n' 
 ignore 1 lines(user_id,user_name,bw_id,wd,tag,bw_text,created_at);
 ```
 
@@ -62,22 +63,24 @@ CREATE TABLE `relationship_` (
   `level` char(16) NOT NULL COMMENT '第几次转发',
   `raw_text` text COMMENT '转发���带的文字',
   `created_at` char(16) NOT NULL COMMENT '转发时间',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `fs_bw_id` (`fs_bw_id`,`bw_id`,`origin`)
 ) CHARSET=utf8mb4;
 ```
 
 ```sql
-load data infile '/var/lib/mysql-files/relationship_新型冠状病毒.csv'
+load data infile '/var/lib/mysql-files/relationship_李兰娟.csv'
 ignore into table relationship_ character set utf8mb4
 fields terminated by ',' optionally enclosed by '"' escaped by '"'
-lines terminated by '\r\n'
-ignore 1 lines(user_id,user_name,bw_id,origin,reposts_count,fs_user_id,fs_screen_name,fs_bw_id,fans_count,fs_fans_count,level,raw_text,created_at);
+lines terminated by '\n' ignore 1 lines(user_id,user_name,bw_id,origin,reposts_count,fs_user_id,fs_screen_name,fs_bw_id,fans_count,fs_fans_count,level,raw_text,created_at);
+
 ```
 
 ## 数据库表结构
 
 <!-- Version1 分表 0 wd_bwid 检索词与bw_id对应 1 originAndRepo 所有微博的信息 2 relationship bw_id与fs_bw_id对应 -->
 <!-- Version2 在表1中增加一个字段prev_bw_id，以便查询 -->
+<!-- Version3 今天改了太多了 我都不记得改了什么了 -->
 
 ### 表 0:检索词对应表 1bw_id 表
 
@@ -94,10 +97,10 @@ UNIQUE KEY `bw_id`(`bw_id`,`wd`)
 ```
 
 ```sql
-load data infile '/var/lib/mysql-files/hot_xinguan_#新冠肺炎病毒#.csv'
+load data infile '/var/lib/mysql-files/hot_xinguan_2019-nCoV.csv'
 ignore into table wd_bwid character set utf8mb4
 fields terminated by ',' optionally enclosed by '"' escaped by '"'
-lines terminated by '\r\n'
+lines terminated by '\n' 
 ignore 1 lines(@dummy,@dummy,bw_id,wd,@dummy,@dummy,@dummy);
 ```
 
@@ -116,56 +119,47 @@ CREATE TABLE `originAndRepo` (
   `created_at` char(16) NOT NULL COMMENT '转发时间or创造时间',
   `reposts_count` char(10) NOT NULL COMMENT '转发次数',
   `origin` char(5) NOT NULL COMMENT '是否原创',
-  `prev_bw_id` char(16) NOT NULL COMMENT '其上一层微博or没有上一层微博',
+  `prev_bw_id` char(16) NOT NULL default 'Null' COMMENT '其上一层微博or没有上一层微博',
   PRIMARY KEY (`id`),
   UNIQUE KEY `bw_id` (`bw_id`)
 ) CHARSET=utf8mb4;
 ```
 
 ```sql
---导入origin相关信息
+--导入origin相关信息（同时存在于relationship_和hot中的才会被导入)
+
 insert ignore into originAndRepo(
   bw_id,user_id,screen_name,fans_count,tag,text,created_at,reposts_count,origin,level
   )
-select * from (
   select h.bw_id,h.user_id,h.user_name,r.fans_count,h.tag,h.bw_text,h.created_at,r.reposts_count,r.origin,r.level
-  from hot h inner join relationship_ r on r.bw_id=h.bw_id
-  ) as a;
+  from hot h inner join relationship_ r on r.bw_id=h.bw_id;
 
-  insert ignore into originAndRepo (bw_id,user_id,screen_name,tag,text,created_at)
-  select bw_id,user_id,user_name,tag,bw_text,created_at
-  from hot;
+update ignore originAndRepo o set o.prev_bw_id=(select r.bw_id from relationship_ r where r.fs_bw_id=o.bw_id and r.bw_id!=Null);
+```
+
+```sql
+-- 导入在hot但是不在relationship_中的
+
+insert ignore into originAndRepo (bw_id,user_id,screen_name,tag,text,created_at)
+select bw_id,user_id,user_name,tag,bw_text,created_at
+from hot;
 
 --因为得到的原创微博的level并不是它自己的，而是转发它的那个人的
 UPDATE originAndRepo SET `level`='0' WHERE origin='True';
-UPDATE originAndRepo SET prev_bw_id='Null' WHERE origin='True';
 
-```
-
-范例：
-
-```a
-*************************** 64. row ***************************
-           id: 64
-      user_id: 1822225334
-  screen_name: 就叫我肖肖
-        bw_id: 4464177198277616
-   fans_count: Null
-        level: 0
-         text: 我想问如果得了   #新冠肺炎病毒#  以后还会不会再次感染 得过的人是否会有抗体 有没有人知道      #武汉加油#
-          tag: #新冠肺炎病毒#  #武汉加油#
-   created_at: 2020-01-24
-reposts_count: 0
-       origin: True
 ```
 
 ```sql
 --导入repo相关信息
 insert ignore into originAndRepo(
-  bw_id,user_id,screen_name,fans_count,text,created_at,reposts_count,origin,level,prev_bw_id
+bw_id,user_id,screen_name,fans_count,text,created_at,level,prev_bw_id
 )
-select fs_bw_id,fs_user_id,fs_screen_name,fs_fans_count,raw_text,created_at,(select distinct reposts_count from relationship_ b where b.bw_id=a.fs_bw_id),(select distinct origin from relationship_ b where b.bw_id=a.fs_bw_id),level,bw_id
-from relationship_ a;
+select fs_bw_id,fs_user_id,fs_screen_name,fs_fans_count,raw_text,created_at,level,bw_id
+from relationship_;
+
+update ignore originAndRepo o set o.reposts_count=(select distinct reposts_count from relationship_ b where b.bw_id=o.bw_id);
+update ignore originAndRepo o set o.origin=(select distinct origin from relationship_ b where b.bw_id=o.bw_id)
+
 ```
 
 TODO: 出现了非连续自增主键 需要解决吗？
@@ -188,13 +182,19 @@ bw_id fs_bw_id （1 对多）
 
 ```sql
 CREATE TABLE `relationship` (
-  `id` bigint(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增主键',
-  `fs_bw_id` char(16) COMMENT '这条微博的博文ID',
-  `bw_id` varchar(45) NOT NULL COMMENT '博文id',
-  PRIMARY KEY (`id`)
+`id` bigint(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+`fs_bw_id` char(16) NOT NULL default 'Null' COMMENT '转发了这条微博的博文ID',
+`bw_id` varchar(45) NOT NULL COMMENT '博文id',
+PRIMARY KEY (`id`)
 ) CHARSET=utf8mb4;
 ```
 
 ```sql
-insert into relationship (bw_id,fs_bw_id) select bw_id,fs_bw_id from relationship_ where fs_bw_id != 'Null' ;
+--只有存在于relationship_里面的关系才会被导入
+insert into relationship (bw_id,fs_bw_id) select bw_id,fs_bw_id from relationship_ ;
+
+--导入只存在于hot但是不存在于relationship里面的关系
+
+insert ignore into relationship (bw_id,fs_bw_id) select bw_id,prev_bw_id from originAndRepo;
+
 ```
