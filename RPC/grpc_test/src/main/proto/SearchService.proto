@@ -1,0 +1,19 @@
+syntax = "proto3";  //proto版本
+option java_multiple_files = true;
+package com.me.grpc_test.grpc;  //注意package结构，结构参考学长的代码
+
+//定义数据
+message QueryRequest {
+    string query = 1;  //定义该数据中有一个String类型的变量
+}
+
+//定义数据
+message QueryResponse {
+    string response = 1;
+}
+
+//调用
+service SearchService {  //其中SearchService与文件名一致
+     //方法名为searchQuery，传入一个QueryRequest数据，返回一个QueryResponse数据（与上面对应）
+     rpc searchQuery(QueryRequest) returns (QueryResponse);
+}
