@@ -74,3 +74,7 @@ resource中的文件最终会位于classpath根目录下，使用方式：
     <mirrorOf>central</mirrorOf>
   </mirror>
   ```
+
+## Maven报错Could not transfer artifact org.springframework.boot:spring-boot-starter-par....(系统找不到指定路径)
+
+不知道为什么我的本地仓库的路径实际上是不存在的，所以在setting->Maven改过来这个本地仓库的路径即可
