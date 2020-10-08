@@ -78,3 +78,27 @@ resource中的文件最终会位于classpath根目录下，使用方式：
 ## Maven报错Could not transfer artifact org.springframework.boot:spring-boot-starter-par....(系统找不到指定路径)
 
 不知道为什么我的本地仓库的路径实际上是不存在的，所以在setting->Maven改过来这个本地仓库的路径即可
+
+## 依赖报错：Element 'dependency' cannot have character [children], because the type's content type is element-only.
+
+从别的地方复制过来的`<dependency>`，它里面可能会有不正确的空格，例如：
+
+```html
+		<dependency>
+			   <groupId>org.powermock</groupId>
+			　　<artifactId>powermock-api-mockito2</artifactId>
+			　　<version>2.0.0</version>
+			　　<scope>test</scope>
+		</dependency>
+```
+
+这个时候就会报这个错，只需要删除空格就行了：
+
+```html
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito2</artifactId>
+			<version>2.0.0</version>
+			<scope>test</scope>
+		</dependency>
+```
