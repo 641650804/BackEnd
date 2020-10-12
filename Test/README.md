@@ -1,6 +1,6 @@
 # 测试相关
 
-### 1. controller测试中的模拟请求
+## 1. controller测试中的模拟请求
 
 主要使用的是MockMvc：
 
@@ -69,7 +69,7 @@ public class WeiboControllerTest {
 
 
 
-### 2. 判断json串是否与目标相等
+## 2. 判断json串是否与目标相等
 
 由于json每次返回的时候同级的字段顺序不太一样，因此直接使用Assert.Equals对比json字符串就很难完全对得上，这个时候可以使用**JSONAssert**
 
@@ -93,7 +93,7 @@ JSONAssert.assertEquals(expectedStr, actualStr, false);
 
 
 
-### 3. 如何在主机上跑测试
+## 3. 如何在主机上跑测试
 
 在pom中使用相应的插件，并将skipTests的值调整为false：
 
@@ -116,3 +116,35 @@ mvn test -Dtest=需要测试的类名
 mvn test -Dtest=需要测试的类名#对应的方法
 ```
 
+## JMockit requires a Java 6+ VM
+
+报错：
+
+```java
+    java.lang.ExceptionInInitializerError
+	at com.weibo.weibo.service.SearchServiceImplTest.searchQueryOnlyMysql(SearchServiceImplTest.java:42)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+    ......
+Caused by: java.lang.IllegalStateException: JMockit requires a Java 6+ VM
+	at mockit.internal.startup.AgentInitialization.loadAgentFromLocalJarFile(AgentInitialization.java:25)
+	at mockit.internal.startup.Startup.verifyInitialization(Startup.java:172)
+	at mockit.Invocations.<clinit>(Invocations.java:26)
+	... 64 more
+
+	at mockit.internal.startup.AgentInitialization.loadAgentFromLocalJarFile(AgentInitialization.java:25)
+```
+
+解决：由`JMockit requires a Java 6+ VM`可知是JDK版本问题，查看`mockit.internal.startup.AgentInitialization.loadAgentFromLocalJarFile`：
+
+```java
+	    static boolean loadAgentFromLocalJarFile() {
+        if (!Utilities.JAVA6 && !Utilities.JAVA7 && !Utilities.JAVA8) {
+            throw new IllegalStateException("JMockit requires a Java 6+ VM");
+        } else {
+            String jarFilePath = discoverPathToJarFile();
+            return (new AgentLoader(jarFilePath)).loadAgent();
+        }
+    }
+```
+
+只有JDK678是可以用的。
