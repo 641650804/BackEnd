@@ -116,7 +116,7 @@ mvn test -Dtest=需要测试的类名
 mvn test -Dtest=需要测试的类名#对应的方法
 ```
 
-## JMockit requires a Java 6+ VM
+## 4. JMockit requires a Java 6+ VM
 
 报错：
 
@@ -148,3 +148,15 @@ Caused by: java.lang.IllegalStateException: JMockit requires a Java 6+ VM
 ```
 
 只有JDK678是可以用的。
+
+## org.junit.Test与org.junit.jupiter.api.Test
+
+
+[Junit5 教程](https://developer.ibm.com/zh/tutorials/j-introducing-junit5-part1-jupiter-api/)：
+
+人们倾向于将术语`Junit 5`和`Junit Jupiter`当作同义词用，虽然大部分情况下没什么问题，
+但是它们是不同的，事实上Junit5=Junit Platform+Junit Jupiter+Junit Vintage。
+
+![Junit 5架构](./../img/Junit5.png)
+
+`org.junit.Test`和`org.junit.jupiter.api.Test`不可混用。
