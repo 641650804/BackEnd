@@ -39,6 +39,3 @@ numactl --interleave=all mongod [other options]
 ## 启动MongoDB报错ERROR: dbpath (/data/db) does not exist.
 
 修改`/etc/mongodb.conf`中的数据目录并新建一个。
-
-
-
