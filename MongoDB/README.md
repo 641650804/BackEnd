@@ -65,3 +65,24 @@ encountered 1 error(s)
 > --jsonArray
 > Accepts the import of data expressed with multiple MongoDB documents within a single JSON array. Limited to imports of 16 MB or smaller.
 > mongoimport的文档：https://docs.mongodb.com/database-tools/mongoimport/#bin.mongoimport
+
+解决办法：
+
+jsonArray格式的是这样的：
+
+```json
+[{"obj":1},
+{"obj":2},
+{"obj":3}]
+```
+
+只需要改成这样的：
+
+
+```json
+{"obj":1}
+{"obj":2}
+{"obj":3}
+```
+
+并且去掉--jsonArray参数即可。
