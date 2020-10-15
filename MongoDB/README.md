@@ -86,3 +86,7 @@ jsonArray格式的是这样的：
 ```
 
 并且去掉--jsonArray参数即可。
+
+## 导入数据报错exception:read error, or input line too long (max length: 16777216)
+
+注意mongodb对单个json的大小也是有要求的...如果单个json太长了它就会报这个错。
