@@ -39,3 +39,29 @@ numactl --interleave=all mongod [other options]
 ## 启动MongoDB报错ERROR: dbpath (/data/db) does not exist.
 
 修改`/etc/mongodb.conf`中的数据目录并新建一个。
+
+## 使用mongoimport导入jsonArray时报错，但没有具体提示
+
+向mongodb中导入jsonArray文件只需要在cmd里输入指令：
+
+```shell
+mongoimport --db weibo --collection stockNotice --file stockNotice.json
+如果是jsonArray格式的(最外面是[])：
+mongoimport --db weibo --collection stockNotice --jsonArray --file stockNotice.json
+```
+
+但使用导入jsonArray命令的时候报了错：
+
+```a
+2020-10-16T01:35:33.715+0800 check 0 0
+2020-10-16T01:35:33.715+0800 imported 0 objects
+encountered 1 error(s)
+```
+
+除此之外没有提示。
+
+这是因为：
+
+> --jsonArray
+> Accepts the import of data expressed with multiple MongoDB documents within a single JSON array. Limited to imports of 16 MB or smaller.
+> mongoimport的文档：https://docs.mongodb.com/database-tools/mongoimport/#bin.mongoimport
